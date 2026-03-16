@@ -25,9 +25,16 @@
     body.snowy   { background: linear-gradient(135deg, #e0eafc, #cfdef3, #e0eafc); color: #333; }
     body.thunder { background: linear-gradient(135deg, #0f0c29, #1a1a2e, #0f0c29); }
 
-    .card {
+    /* Layout wrapper */
+    .layout {
+      display: flex;
+      gap: 20px;
       width: 100%;
-      max-width: 480px;
+      max-width: 900px;
+      align-items: flex-start;
+    }
+
+    .card {
       background: rgba(255,255,255,0.08);
       backdrop-filter: blur(20px);
       border: 1px solid rgba(255,255,255,0.15);
@@ -35,6 +42,18 @@
       padding: 40px 36px;
       color: #fff;
       box-shadow: 0 25px 60px rgba(0,0,0,0.4);
+    }
+
+    /* Current weather card */
+    .card-current {
+      flex: 0 0 420px;
+    }
+
+    /* Forecast card */
+    .card-forecast {
+      flex: 1;
+      min-width: 0;
+      padding: 32px 28px;
     }
 
     body.snowy .card { color: #222; border-color: rgba(0,0,0,0.1); background: rgba(255,255,255,0.6); }
@@ -165,6 +184,63 @@
       margin-top: 3px;
     }
 
+    /* Forecast */
+    .forecast-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.55;
+      margin-bottom: 20px;
+    }
+
+    .forecast-days {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .forecast-day {
+      display: flex;
+      align-items: center;
+      background: rgba(255,255,255,0.08);
+      border-radius: 16px;
+      padding: 14px 18px;
+      gap: 12px;
+    }
+    body.snowy .forecast-day { background: rgba(0,0,0,0.06); }
+
+    .forecast-day .f-icon { font-size: 28px; flex: 0 0 36px; text-align: center; }
+
+    .forecast-day .f-info { flex: 1; min-width: 0; }
+    .forecast-day .f-day-name {
+      font-size: 15px;
+      font-weight: 600;
+    }
+    .forecast-day .f-desc {
+      font-size: 12px;
+      opacity: 0.6;
+      text-transform: capitalize;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .forecast-day .f-temps {
+      text-align: right;
+      flex: 0 0 auto;
+    }
+    .forecast-day .f-temp-high {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .forecast-day .f-temp-low {
+      font-size: 13px;
+      opacity: 0.5;
+      margin-top: 2px;
+    }
+
     /* Error / loading */
     .message {
       text-align: center;
@@ -211,70 +287,89 @@
       transition: background 0.2s;
     }
     .api-input-row button:hover { background: #3a7be0; }
+
+    /* Responsive: stack on small screens */
+    @media (max-width: 700px) {
+      .layout { flex-direction: column; }
+      .card-current { flex: none; width: 100%; }
+      .card-forecast { width: 100%; }
+    }
   </style>
 </head>
 <body>
-  <div class="card">
+  <div class="layout">
 
-    <!-- API Key Setup (shown if no key stored) -->
-    <div id="setup-section" class="setup hidden">
-      <p>
-        To get started, enter your free API key from<br>
-        <a href="https://openweathermap.org/api" target="_blank">openweathermap.org</a>
-        (free tier works great).
-      </p>
-      <div class="api-input-row">
-        <input type="text" id="api-key-input" placeholder="Paste your API key here" />
-        <button onclick="saveApiKey()">Save</button>
+    <!-- Current weather card -->
+    <div class="card card-current">
+
+      <!-- API Key Setup -->
+      <div id="setup-section" class="setup hidden">
+        <p>
+          To get started, enter your free API key from<br>
+          <a href="https://openweathermap.org/api" target="_blank">openweathermap.org</a>
+          (free tier works great).
+        </p>
+        <div class="api-input-row">
+          <input type="text" id="api-key-input" placeholder="Paste your API key here" />
+          <button onclick="saveApiKey()">Save</button>
+        </div>
       </div>
+
+      <!-- Main weather UI -->
+      <div id="main-section" class="hidden">
+        <div class="search-bar">
+          <input type="text" id="city-input" placeholder="Search city..." onkeydown="if(event.key==='Enter') fetchWeather()" />
+          <button onclick="fetchWeather()"><i class="fa fa-search"></i></button>
+          <button onclick="getLocation()" title="Use my location"><i class="fa fa-location-dot"></i></button>
+        </div>
+
+        <div id="loading" class="message hidden"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
+        <div id="error-msg" class="message error hidden"></div>
+
+        <div id="weather-data" class="hidden">
+          <div class="location">
+            <h2 id="city-name"></h2>
+            <p id="date-time"></p>
+          </div>
+          <div class="weather-icon" id="weather-icon"></div>
+          <div class="temperature">
+            <div><span class="temp-main" id="temp"></span><span class="temp-unit">°C</span></div>
+            <div class="feels-like" id="feels-like"></div>
+          </div>
+          <div class="description" id="description"></div>
+          <div class="stats">
+            <div class="stat">
+              <i class="fa fa-droplet"></i>
+              <div class="stat-value" id="humidity"></div>
+              <div class="stat-label">Humidity</div>
+            </div>
+            <div class="stat">
+              <i class="fa fa-wind"></i>
+              <div class="stat-value" id="wind"></div>
+              <div class="stat-label">Wind</div>
+            </div>
+            <div class="stat">
+              <i class="fa fa-eye"></i>
+              <div class="stat-value" id="visibility"></div>
+              <div class="stat-label">Visibility</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
-    <!-- Main weather UI -->
-    <div id="main-section" class="hidden">
-      <div class="search-bar">
-        <input type="text" id="city-input" placeholder="Search city..." onkeydown="if(event.key==='Enter') fetchWeather()" />
-        <button onclick="fetchWeather()"><i class="fa fa-search"></i></button>
-        <button onclick="getLocation()" title="Use my location"><i class="fa fa-location-dot"></i></button>
-      </div>
-
-      <div id="loading" class="message hidden"><i class="fa fa-spinner fa-spin"></i> Loading...</div>
-      <div id="error-msg" class="message error hidden"></div>
-
-      <div id="weather-data" class="hidden">
-        <div class="location">
-          <h2 id="city-name"></h2>
-          <p id="date-time"></p>
-        </div>
-        <div class="weather-icon" id="weather-icon"></div>
-        <div class="temperature">
-          <div><span class="temp-main" id="temp"></span><span class="temp-unit">°C</span></div>
-          <div class="feels-like" id="feels-like"></div>
-        </div>
-        <div class="description" id="description"></div>
-        <div class="stats">
-          <div class="stat">
-            <i class="fa fa-droplet"></i>
-            <div class="stat-value" id="humidity"></div>
-            <div class="stat-label">Humidity</div>
-          </div>
-          <div class="stat">
-            <i class="fa fa-wind"></i>
-            <div class="stat-value" id="wind"></div>
-            <div class="stat-label">Wind</div>
-          </div>
-          <div class="stat">
-            <i class="fa fa-eye"></i>
-            <div class="stat-value" id="visibility"></div>
-            <div class="stat-label">Visibility</div>
-          </div>
-        </div>
-      </div>
+    <!-- 3-day forecast card -->
+    <div class="card card-forecast hidden" id="forecast-card">
+      <div class="forecast-title">3-Day Forecast</div>
+      <div class="forecast-days" id="forecast-days"></div>
     </div>
 
   </div>
 
   <script>
-    const API_BASE = 'https://api.openweathermap.org/data/2.5/weather';
+    const API_BASE     = 'https://api.openweathermap.org/data/2.5/weather';
+    const FORECAST_BASE = 'https://api.openweathermap.org/data/2.5/forecast';
 
     function getApiKey() {
       return localStorage.getItem('owm_api_key');
@@ -313,10 +408,15 @@
       showLoading(true);
       showError('');
       try {
-        const res = await fetch(`${API_BASE}?lat=${lat}&lon=${lon}&appid=${key}&units=metric`);
-        const data = await res.json();
-        if (data.cod !== 200) throw new Error(data.message);
-        renderWeather(data);
+        const [weatherRes, forecastRes] = await Promise.all([
+          fetch(`${API_BASE}?lat=${lat}&lon=${lon}&appid=${key}&units=metric`),
+          fetch(`${FORECAST_BASE}?lat=${lat}&lon=${lon}&appid=${key}&units=metric`)
+        ]);
+        const weather  = await weatherRes.json();
+        const forecast = await forecastRes.json();
+        if (weather.cod !== 200) throw new Error(weather.message);
+        renderWeather(weather);
+        renderForecast(forecast);
       } catch (e) {
         showError(e.message);
       }
@@ -329,10 +429,15 @@
       showLoading(true);
       showError('');
       try {
-        const res = await fetch(`${API_BASE}?q=${encodeURIComponent(city)}&appid=${key}&units=metric`);
-        const data = await res.json();
-        if (data.cod !== 200) throw new Error(data.message);
-        renderWeather(data);
+        const [weatherRes, forecastRes] = await Promise.all([
+          fetch(`${API_BASE}?q=${encodeURIComponent(city)}&appid=${key}&units=metric`),
+          fetch(`${FORECAST_BASE}?q=${encodeURIComponent(city)}&appid=${key}&units=metric`)
+        ]);
+        const weather  = await weatherRes.json();
+        const forecast = await forecastRes.json();
+        if (weather.cod !== 200) throw new Error(weather.message);
+        renderWeather(weather);
+        renderForecast(forecast);
       } catch (e) {
         showError(e.message === 'city not found' ? 'City not found. Try another name.' : e.message);
       }
@@ -352,10 +457,57 @@
       document.getElementById('visibility').textContent = d.visibility >= 1000
         ? `${(d.visibility / 1000).toFixed(1)} km` : `${d.visibility} m`;
 
-      const icon = weatherIcon(d.weather[0].id, d.weather[0].icon);
-      document.getElementById('weather-icon').textContent = icon;
-
+      document.getElementById('weather-icon').textContent = weatherIcon(d.weather[0].id, d.weather[0].icon);
       applyTheme(d.weather[0].id, d.weather[0].icon);
+    }
+
+    function renderForecast(data) {
+      // Group 3-hour slots by day, skip today
+      const today = new Date().toDateString();
+      const byDay = {};
+
+      for (const item of data.list) {
+        const date = new Date(item.dt * 1000);
+        const key  = date.toDateString();
+        if (key === today) continue;
+        if (!byDay[key]) byDay[key] = [];
+        byDay[key].push(item);
+      }
+
+      const days = Object.entries(byDay).slice(0, 3);
+      const container = document.getElementById('forecast-days');
+      container.innerHTML = '';
+
+      for (const [dayStr, slots] of days) {
+        const temps = slots.map(s => s.main.temp);
+        const high  = Math.round(Math.max(...temps));
+        const low   = Math.round(Math.min(...temps));
+
+        // Pick midday slot or first available
+        const midday = slots.find(s => {
+          const h = new Date(s.dt * 1000).getHours();
+          return h >= 11 && h <= 14;
+        }) || slots[0];
+
+        const dayName = new Date(dayStr).toLocaleDateString('en-US', { weekday: 'long' });
+        const icon    = weatherIcon(midday.weather[0].id, midday.weather[0].icon);
+        const desc    = midday.weather[0].description;
+
+        container.innerHTML += `
+          <div class="forecast-day">
+            <div class="f-icon">${icon}</div>
+            <div class="f-info">
+              <div class="f-day-name">${dayName}</div>
+              <div class="f-desc">${desc}</div>
+            </div>
+            <div class="f-temps">
+              <div class="f-temp-high">${high}°C</div>
+              <div class="f-temp-low">${low}°C</div>
+            </div>
+          </div>`;
+      }
+
+      document.getElementById('forecast-card').classList.remove('hidden');
     }
 
     function weatherIcon(id, icon) {
@@ -366,7 +518,7 @@
       if (id >= 600 && id < 700) return '❄️';
       if (id >= 700 && id < 800) return '🌫️';
       if (id === 800) return isNight ? '🌙' : '☀️';
-      if (id === 801) return isNight ? '🌤️' : '🌤️';
+      if (id === 801) return '🌤️';
       if (id <= 804) return '☁️';
       return '🌡️';
     }
@@ -397,6 +549,7 @@
       if (msg) {
         showLoading(false);
         document.getElementById('weather-data').classList.add('hidden');
+        document.getElementById('forecast-card').classList.add('hidden');
       }
     }
 
